@@ -20,46 +20,56 @@ async function loadIndex() {
 }
 
 // Strict snippet extraction with hard character caps
-function findAllSnippets(fullText, queryTerms, maxSnippets = 5) {
-    if (!fullText) return ["No preview available."];
+function findAllSnippets(fullText, queryTerms) {
+    if (!fullText) return [];
     
-    const lowerText = fullText.toLowerCase();
     const snippets = [];
-    const windowSize = 90; // Small window (~15 words before and after match)
-    let searchStartIndex = 0;
+    const lowerText = fullText.toLowerCase();
     
-    while (snippets.length < maxSnippets && searchStartIndex < fullText.length) {
-        let earliestMatchIdx = -1;
-        let matchedTermLength = 0;
+    // Convert queryTerms into clean lowercase search targets (handling quoted phrases)
+    const targets = queryTerms.map(term => {
+        const clean = term.replace(/^"|"$/g, "").trim().toLowerCase();
+        return clean;
+    }).filter(t => t.length > 0 && t !== 'and' && t !== 'or');
 
-        for (const term of queryTerms) {
-            const idx = lowerText.indexOf(term, searchStartIndex);
-            if (idx !== -1 && (earliestMatchIdx === -1 || idx < earliestMatchIdx)) {
-                earliestMatchIdx = idx;
-                matchedTermLength = term.length;
+    // Find all occurrences for each target term/phrase
+    targets.forEach(target => {
+        let pos = 0;
+        while ((pos = lowerText.indexOf(target, pos)) !== -1) {
+            // Extract a window around the match
+            const start = Math.max(0, pos - 60);
+            const end = Math.min(fullText.length, pos + target.length + 140);
+            
+            let snippetText = fullText.slice(start, end);
+            if (start > 0) snippetText = "..." + snippetText;
+            if (end < fullText.length) snippetText = snippetText + "...";
+
+            // Highlight the exact match term inside the snippet
+            const highlighted = highlightMatch(snippetText, target);
+            
+            // Prevent duplicate overlapping snippet windows
+            if (!snippets.includes(highlighted)) {
+                snippets.push(highlighted);
             }
+            
+            pos += target.length; // Move forward to find subsequent occurrences
         }
+    });
 
-        if (earliestMatchIdx === -1) break;
-
-        const start = Math.max(0, earliestMatchIdx - windowSize);
-        const end = Math.min(fullText.length, earliestMatchIdx + matchedTermLength + windowSize);
-
-        let snippet = fullText.substring(start, end);
-        if (start > 0) snippet = '...' + snippet;
-        if (end < fullText.length) snippet = snippet + '...';
-
-        snippets.push(highlightTerms(snippet, queryTerms));
-        searchStartIndex = earliestMatchIdx + matchedTermLength;
-    }
-
+    // Fallback if no specific matches found
     if (snippets.length === 0) {
-        return [highlightTerms(fullText.substring(0, 200) + '...', queryTerms)];
+        snippets.push(fullText.slice(0, 200) + "...");
     }
 
     return snippets;
 }
 
+// Helper to wrap matched phrases in a highlight tag
+function highlightMatch(text, term) {
+    const escapedTerm = term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const regex = new RegExp(`(${escapedTerm})`, 'gi');
+    return text.replace(regex, '<mark>$1</mark>');
+}
 function highlightTerms(text, queryTerms) {
     let safeText = escapeHtml(text);
     queryTerms.forEach(term => {
@@ -157,30 +167,84 @@ function renderResults(results, queryTerms) {
         container.appendChild(card);
     });
 }
-function handleSearch(e) {
-    if (e.key !== 'Enter') return;
-
-    const query = e.target.value.toLowerCase().trim();
+// Helper to evaluate complex search syntax ("phrases", OR, and AND)
+function matchesQuery(text, queryStr) {
+    if (!queryStr || !queryStr.trim()) return true;
     
-    if (!query) {
+    const lowerText = text.toLowerCase();
+    const trimmedQuery = queryStr.trim();
+    
+    // 1. Handle explicit "OR" logic
+    if (/\bOR\b/i.test(trimmedQuery)) {
+        const parts = trimmedQuery.split(/\s+OR\s+/i);
+        return parts.some(part => matchesQuery(text, part.replace(/[()]/g, "")));
+    }
+    
+    // 2. Handle explicit "AND" logic
+    if (/\bAND\b/i.test(trimmedQuery)) {
+        const parts = trimmedQuery.split(/\s+AND\s+/i);
+        return parts.every(part => matchesQuery(text, part.replace(/[()]/g, "")));
+    }
+    
+    // 3. Handle outer parentheses removal if wrapping a group
+    if (trimmedQuery.startsWith('(') && trimmedQuery.endsWith(')')) {
+        return matchesQuery(text, trimmedQuery.slice(1, -1));
+    }
+    
+    // 4. Handle exact phrase matching (e.g., "black smith")
+    if (trimmedQuery.startsWith('"') && trimmedQuery.endsWith('"')) {
+        const phrase = trimmedQuery.slice(1, -1).toLowerCase();
+        return lowerText.includes(phrase);
+    }
+    
+    // 5. Handle space-separated terms (implicit AND)
+    const subTerms = trimmedQuery.match(/("[^"]+"|[^\s()]+)/g) || [];
+    
+    return subTerms.every(term => {
+        const cleanedTerm = term.replace(/[()]/g, "").trim();
+        if (!cleanedTerm || cleanedTerm.toUpperCase() === 'AND' || cleanedTerm.toUpperCase() === 'OR') return true;
+        
+        if (cleanedTerm.startsWith('"') && cleanedTerm.endsWith('"')) {
+            return lowerText.includes(cleanedTerm.slice(1, -1).toLowerCase());
+        }
+        return lowerText.includes(cleanedTerm.toLowerCase());
+    });
+}
+function handleSearch(e) {
+    // If it's triggered by an Enter key or a button/input change event
+    if (e.type === 'keydown' && e.key !== 'Enter') return;
+
+    const rawQuery = e.target.value.trim();
+    
+    if (!rawQuery) {
         document.getElementById('resultsContainer').innerHTML = '';
         document.getElementById('stats').textContent = `Index loaded. ${searchIndex.length} transcripts available.`;
         return;
     }
 
     const startTime = performance.now();
-    const terms = query.split(/\s+/).filter(t => t.length > 0);
     
     const filtered = searchIndex.filter(item => {
-        const searchableBlob = `${item.narrator_name} ${item.neighborhood} ${item.pdf_filename} ${item.full_text}`.toLowerCase();
-        return terms.every(term => searchableBlob.includes(term));
+        const searchableBlob = `${item.narrator_name} ${item.neighborhood} ${item.pdf_filename} ${item.full_text}`;
+        return matchesQuery(searchableBlob, rawQuery);
     });
 
     const endTime = performance.now();
     const elapsedMs = Math.round(endTime - startTime);
 
     document.getElementById('stats').textContent = `Found ${filtered.length} matching transcript(s) in ${elapsedMs} ms.`;
-    renderResults(filtered, terms);
+    
+// Extract proper terms for highlighting, dropping literal operators
+    let highlightTerms = rawQuery.split(/\s+(?:OR|AND)\s+/i).flatMap(part => 
+        part.match(/("[^"]+"|[^\s()]+)/g) || []
+    ).filter(t => {
+        const upper = t.toUpperCase();
+        return upper !== 'OR' && upper !== 'AND' && t.replace(/[()]/g, "").trim().length > 0;
+    });
+    
+    if (highlightTerms.length === 0) highlightTerms = [rawQuery];
+	
+    renderResults(filtered, highlightTerms);
 }
 
 function escapeHtml(str) {
