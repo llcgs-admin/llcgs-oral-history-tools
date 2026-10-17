@@ -5,7 +5,7 @@ from mutagen.mp3 import MP3
 
 # Define your local folder paths (update these to match your actual folders)
 PDF_DIR = r"G:\Shared drives\LincolnOralHistory\LOH Media\PDFs"
-AUDIO_DIR = r"G:\Shared drives\LincolnOralHistory\LOH Media\Audio"
+AUDIO_DIR = r"D:\mp3s"
 
 def extract_pdf_cover_text(pdf_path, max_pages=3):
     """Extracts text from the first few pages of a PDF to identify names/dates."""

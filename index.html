@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lincoln Oral History Search | LLCGS</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #2980b9;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+        }
+        .search-box {
+            width: 100%;
+            padding: 0.8rem;
+            font-size: 1.1rem;
+            border: 2px solid #ccc;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            box-sizing: border-box;
+        }
+        #stats {
+            font-style: italic;
+            color: #666;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        .result-card {
+            background: var(--card-bg);
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .narrator-title {
+            margin: 0;
+            font-size: 1.25rem;
+            color: var(--primary-color);
+        }
+        .badge {
+            background-color: #e2e8f0;
+            color: #4a5568;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .meta-info {
+            font-size: 0.9rem;
+            color: #555;
+            margin-bottom: 0.75rem;
+        }
+        .snippet {
+            background-color: #f7fafc;
+            border-left: 3px solid var(--accent-color);
+            padding: 0.75rem;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            color: #2d3748;
+        }
+        .actions {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        .actions a {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .actions a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lincoln Oral History Transcripts</h1>
+        <p style="text-align: center; margin-top: -0.5rem; color: #666;">Lincoln-Lancaster County Genealogical Society Digital Collections</p>
+        
+        <input type="text" id="searchInput" class="search-box" placeholder="Type search keywords and press Enter...">
+        <div id="stats">Initializing index...</div>
+        
+        <div id="resultsContainer"></div>
+    </div>
+
+    <script src="app_v2.js"></script>
+</body>
+</html>
