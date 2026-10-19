@@ -153,16 +153,31 @@ function renderResults(results, queryTerms) {
             card.appendChild(btnContainer);
         }
 
-        // 5. Actions Footer (View PDF & Audio Links)
+// 5. Actions Footer (View PDF & Audio Links)
         const actionsDiv = document.createElement('div');
         actionsDiv.className = 'actions';
-        let actionsHtml = `<a href="PDFs/${encodeURIComponent(item.pdf_filename)}" target="_blank">📄 View Full PDF Transcript</a>`;
-        if (item.audio_filenames) {
+        
+        const pdfUrl = item.pdf_link || '#';
+        let actionsHtml = `<a href="${pdfUrl}" target="_blank">📄 View Full PDF Transcript</a>`;
+        
+        if (item.audio_links && item.audio_links.length > 0) {
+            actionsHtml += ` <span style="color:#888;">|</span> 🎧 Audio: `;
+            
+            // Map over each audio file object to generate individual links
+            const audioLinksHtml = item.audio_links.map(audio => {
+                const linkUrl = audio.link && audio.link !== '#' ? audio.link : '#';
+                return `<a href="${linkUrl}" target="_blank">${escapeHtml(audio.filename)}</a>`;
+            }).join(', ');
+            
+            actionsHtml += audioLinksHtml;
+        } else if (item.audio_filenames) {
+            // Fallback if audio_links isn't populated yet
             actionsHtml += ` <span style="color:#888;">|</span> 🎧 Audio Parts: ${escapeHtml(item.audio_filenames)}`;
         }
+        
         actionsDiv.innerHTML = actionsHtml;
         card.appendChild(actionsDiv);
-
+		
         // Append final built card
         container.appendChild(card);
     });

@@ -1,0 +1,6 @@
+Google Oauth Credentials for LOH Index builder -- 17 Oct 2026 -- Hopmann
+Client ID
+43118416519-nckf84n5e9uieg4uu4oqmr4i6asf7oa8.apps.googleusercontent.com
+Client Secret
+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
+
