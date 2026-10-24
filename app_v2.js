@@ -308,3 +308,25 @@ function escapeHtml(str) {
 document.getElementById('searchInput').addEventListener('keydown', handleSearch);
 
 loadIndex();
+
+// Help Modal Event Listeners
+const helpModal = document.getElementById('helpModal');
+const helpBtn = document.getElementById('helpBtn');
+const closeHelpBtn = document.getElementById('closeHelpBtn');
+
+if (helpBtn && helpModal && closeHelpBtn) {
+    helpBtn.addEventListener('click', () => {
+        helpModal.style.display = 'flex';
+    });
+
+    closeHelpBtn.addEventListener('click', () => {
+        helpModal.style.display = 'none';
+    });
+
+    // Close modal if clicking outside the white box content area
+    helpModal.addEventListener('click', (e) => {
+        if (e.target === helpModal) {
+            helpModal.style.display = 'none';
+        }
+    });
+}
