@@ -103,7 +103,13 @@
         <h1>Lincoln Oral History Transcripts</h1>
         <p style="text-align: center; margin-top: -0.5rem; color: #666;">Lincoln-Lancaster County Genealogical Society Digital Collections</p>
         
-        <input type="text" id="searchInput" class="search-box" placeholder="Type search keywords and press Enter...">
+        <input type="text" id="searchInput" class="search-box" placeholder="Type search keywords and press Enter..." autofocus>
+
+		<!-- New Neighborhood Filter Dropdown -->
+		<select id="neighborhoodFilter" style="font-size: 1rem; padding: 0.5rem; width: 100%; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 1rem; background-color: #fff; cursor: pointer;">
+			<option value="All">All Neighborhoods</option>
+		</select>
+
         <div id="stats">Initializing index...</div>
         
         <div id="resultsContainer"></div>

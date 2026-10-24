@@ -8,6 +8,9 @@ async function loadIndex() {
         if (!response.ok) throw new Error('Failed to load search index.');
         
         searchIndex = await response.json();
+		
+		// Populate the dropdown immediately once records are loaded
+        populateNeighborhoodDropdown(searchIndex);		
         
         const endTime = performance.now();
         const elapsedMs = Math.round(endTime - startTime);
@@ -19,8 +22,33 @@ async function loadIndex() {
     }
 }
 
+function populateNeighborhoodDropdown(records) {
+    const select = document.getElementById('neighborhoodFilter');
+    if (!select) return;
+    
+    // Clear existing options except "All"
+    select.innerHTML = '<option value="All">All Neighborhoods</option>';
+    
+    // Extract unique, sorted neighborhoods from records
+    const neighborhoods = [...new Set(records.map(r => r.neighborhood).filter(Boolean))].sort();
+    
+    neighborhoods.forEach(neighborhood => {
+        const option = document.createElement('option');
+        option.value = neighborhood;
+        option.textContent = neighborhood;
+        select.appendChild(option);
+    });
+    
+    // Bind the change event directly right here after populating!
+    select.onchange = function() {
+        handleSearch();
+    };
+}
+
+// Strict snippet extraction with hard character caps
 // Strict snippet extraction with hard character caps
 function findAllSnippets(fullText, queryTerms) {
+    // 1. Guard against null, undefined, or missing text
     if (!fullText) return [];
     
     const snippets = [];
@@ -99,8 +127,8 @@ function renderResults(results, queryTerms) {
 
         const narrator = item.narrator_name !== "Unknown" ? item.narrator_name : item.pdf_filename.replace('.pdf', '');
         const neighborhood = item.neighborhood || "General Collection";
-        const interviewDate = item.date_of_interview !== "Unknown" ? item.date_of_interview : "Date unrecorded";
-
+        /* const interviewDate = item.date_of_interview !== "Unknown" ? item.date_of_interview : "Date unrecorded"; */
+		const interviewDate = "";
         // Generate the targeted snippets
         const allSnippets = findAllSnippets(item.full_text, queryTerms);
         const maxInitialDisplay = 3;
@@ -114,8 +142,9 @@ function renderResults(results, queryTerms) {
         // 2. Metadata Line (Date, File Name, Match Count)
         const metaDiv = document.createElement('div');
         metaDiv.className = 'meta-info';
-        metaDiv.innerHTML = `<strong>Interview Date:</strong> ${escapeHtml(interviewDate)} &bull; <strong>File:</strong> ${escapeHtml(item.pdf_filename)} &bull; <span style="color: var(--accent-color); font-weight: 600;">${allSnippets.length} match(es) in file</span>`;
-        card.appendChild(metaDiv);
+        /* metaDiv.innerHTML = `<strong>Interview Date:</strong> ${escapeHtml(interviewDate)} &bull; <strong>File:</strong> ${escapeHtml(item.pdf_filename)} &bull; <span style="color: var(--accent-color); font-weight: 600;">${allSnippets.length} match(es) in file</span>`; */
+        metaDiv.innerHTML = `<strong>File:</strong> ${escapeHtml(item.pdf_filename)} &bull; <span style="color: var(--accent-color); font-weight: 600;">${allSnippets.length} match(es) in file</span>`;
+		card.appendChild(metaDiv);
 
         // 3. Snippet Container (Only holds the targeted preview blocks)
         const snippetContainer = document.createElement('div');
@@ -226,20 +255,26 @@ function matchesQuery(text, queryStr) {
     });
 }
 function handleSearch(e) {
-    // If it's triggered by an Enter key or a button/input change event
-    if (e.type === 'keydown' && e.key !== 'Enter') return;
+    // If it's a keydown event and NOT Enter, ignore it
+    if (e && e.type === 'keydown' && e.key !== 'Enter') return;
 
-    const rawQuery = e.target.value.trim();
-    
-    if (!rawQuery) {
-        document.getElementById('resultsContainer').innerHTML = '';
-        document.getElementById('stats').textContent = `Index loaded. ${searchIndex.length} transcripts available.`;
-        return;
-    }
+    // Always grab the search input text directly from the element
+    const searchInput = document.getElementById('searchInput');
+    const rawQuery = searchInput ? searchInput.value.trim() : '';
+    const selectedNeighborhood = document.getElementById('neighborhoodFilter').value;
 
     const startTime = performance.now();
     
     const filtered = searchIndex.filter(item => {
+        // 1. Enforce neighborhood filter first
+        if (selectedNeighborhood !== 'All' && item.neighborhood !== selectedNeighborhood) {
+            return false;
+        }
+        
+        // 2. If the search box is empty, include all items matching the neighborhood
+        if (!rawQuery) return true;
+        
+        // 3. Otherwise, check text search blob
         const searchableBlob = `${item.narrator_name} ${item.neighborhood} ${item.pdf_filename} ${item.full_text}`;
         return matchesQuery(searchableBlob, rawQuery);
     });
@@ -249,7 +284,7 @@ function handleSearch(e) {
 
     document.getElementById('stats').textContent = `Found ${filtered.length} matching transcript(s) in ${elapsedMs} ms.`;
     
-// Extract proper terms for highlighting, dropping literal operators
+    // Extract proper terms for highlighting, dropping literal operators
     let highlightTerms = rawQuery.split(/\s+(?:OR|AND)\s+/i).flatMap(part => 
         part.match(/("[^"]+"|[^\s()]+)/g) || []
     ).filter(t => {
@@ -258,7 +293,7 @@ function handleSearch(e) {
     });
     
     if (highlightTerms.length === 0) highlightTerms = [rawQuery];
-	
+    
     renderResults(filtered, highlightTerms);
 }
 
